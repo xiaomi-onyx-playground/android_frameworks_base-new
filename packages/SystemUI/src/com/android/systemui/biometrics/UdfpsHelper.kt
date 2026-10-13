@@ -94,7 +94,6 @@ class UdfpsHelper(
     private val alphaAnimator = ValueAnimator().apply {
         duration = 800L
         addUpdateListener { animator ->
-            view.alpha = animator.animatedValue as Float
             dimLayoutParams.alpha = animator.animatedValue as Float
             try {
                 windowManager.updateViewLayout(view, dimLayoutParams)
@@ -156,20 +155,9 @@ class UdfpsHelper(
 
         Log.i(TAG, "Adjusted Brightness: $adjustedBrightness, Alpha: $targetAlpha")
 
-        alphaAnimator.setFloatValues(view.alpha, targetAlpha)
-        return targetAlpha
-    }
-
-    private fun animateToCurrentBrightness() {
-        brightnessToAlpha()
         alphaAnimator.cancel()
-        alphaAnimator.start()
-    }
-
-    private fun snapToCurrentBrightness() {
-        val targetAlpha = brightnessToAlpha()
-        alphaAnimator.cancel()
-        view.alpha = targetAlpha
+        alphaAnimator.setFloatValues(dimLayoutParams.alpha, targetAlpha)
+        // Keep the black view opaque: view and window alpha multiply during composition.
         dimLayoutParams.alpha = targetAlpha
     }
 
@@ -186,9 +174,7 @@ class UdfpsHelper(
     fun removeDimLayer() {
         alphaAnimator.cancel()
         displayManager.unregisterDisplayListener(displayListener)
-        if (view.isAttachedToWindow) {
-            windowManager.removeView(view)
-        }
+        windowManager.removeView(view)
     }
 
     init {
@@ -220,7 +206,8 @@ class UdfpsHelper(
             shadeInteractor.isShadeTouchable.collect {
                 view.isVisible = it
                 if (view.isVisible) {
-                    animateToCurrentBrightness()
+                    brightnessToAlpha()
+                    alphaAnimator.start()
                 }
             }
         }
